@@ -1,0 +1,32 @@
+menu "Line followe Configuration"
+
+    config BDC_MCPWM_TIMER_RESOLUTION_HZ
+        int "Set the timer resolution for the MCPWM"
+        default 10000000
+
+
+    config BDC_MCPWM_FREQ_HZ
+        int "Set the MCPWM frequency for the MCPWM"
+        default 25000
+
+
+    config BDC_ENCODER_PCNT_HIGH_LIMIT
+        int "Set the PCNT HIGH LIMIT for the ENCODER"
+        default 1000
+
+
+    config BDC_ENCODER_PCNT_LOW_LIMIT
+        int "Set the PCNT LOW LIMIT for the ENCODER"
+        default -1000
+
+    config BDC_PID_LOOP_PERIOD_MS
+        int "Set the PID LOOP period"
+        default 10
+
+
+    config BDC_PID_EXPECT_SPEED
+        int "Set the PID EXPECTED SPEED"
+        default 400
+
+
+endmenu
