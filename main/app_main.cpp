@@ -3,6 +3,7 @@
 #include "Pid.hpp"
 #include "Sensor.hpp"
 #include <stdio.h>
+#include "Puya.hpp"
 
 
 #define TAG "LINE_FOLLOWER"
@@ -20,6 +21,8 @@ Sensor *sensor4 = nullptr;
 Sensor *sensor5 = nullptr;
 
 Pid *pid = nullptr;
+
+Puya *puya = nullptr;
 
 
 
@@ -91,8 +94,17 @@ void encoder_task(void *args)
 extern "C" void app_main()
 {
 
-    xTaskCreatePinnedToCore(encoder_task, "encoder_task", 4096, NULL, 20, NULL,1);
-    xTaskCreatePinnedToCore(motor_task, "motor_task", 4096, NULL, 20, NULL,0);
+    // xTaskCreatePinnedToCore(encoder_task, "encoder_task", 4096, NULL, 20, NULL,1);
+    // xTaskCreatePinnedToCore(motor_task, "motor_task", 4096, NULL, 20, NULL,0);
+
+    puya = new Puya(GPIO_NUM_17,GPIO_NUM_16,UART_NUM_1);
+
+    while (true)
+    {
+        sensor_val_t val = puya->read();
+        vTaskDelay(1);
+    }
+    
 
 
 }
