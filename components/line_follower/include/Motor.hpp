@@ -5,32 +5,34 @@
 #include "esp_timer.h"
 #include "sdkconfig.h"
 #include <stdio.h>
+#include "driver/gpio.h"
 
+#define BDC_MCPWM_TIMER_RESOLUTION_HZ CONFIG_BDC_MCPWM_TIMER_RESOLUTION_HZ
+#define BDC_MCPWM_FREQ_HZ CONFIG_BDC_MCPWM_FREQ_HZ
+#define BDC_MCPWM_DUTY_TICK_MAX \
+  (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ)
 
-#define BDC_MCPWM_TIMER_RESOLUTION_HZ   CONFIG_BDC_MCPWM_TIMER_RESOLUTION_HZ
-#define BDC_MCPWM_FREQ_HZ               CONFIG_BDC_MCPWM_TIMER_RESOLUTION_HZ
-#define BDC_MCPWM_DUTY_TICK_MAX         (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ)
-
-class Motor {
+class Motor
+{
 private:
-
   bdc_motor_handle_t motor = NULL;
 
 public:
-
-/**
- * @brief Create BDC Motor based on MCPWM peripheral
- *
- * @param pin_a: BDC pin a
- * @param pin_b: BDC pin b
- * @param ret_motor Returned BDC Motor handle
- * @return
- *      - ESP_OK: Create BDC Motor handle successfully
- *      - ESP_ERR_INVALID_ARG: Create BDC Motor handle failed because of invalid argument
- *      - ESP_ERR_NO_MEM: Create BDC Motor handle failed because of out of memory
- *      - ESP_FAIL: Create BDC Motor handle failed because some other error
- */
-  Motor(gpio_num_t pin_a, gpio_num_t pin_b, int group_id = 0);
+  /**
+   * @brief Create BDC Motor based on MCPWM peripheral
+   *
+   * @param pin_a: BDC pin a
+   * @param pin_b: BDC pin b
+   * @param ret_motor Returned BDC Motor handle
+   * @return
+   *      - ESP_OK: Create BDC Motor handle successfully
+   *      - ESP_ERR_INVALID_ARG: Create BDC Motor handle failed because of
+   * invalid argument
+   *      - ESP_ERR_NO_MEM: Create BDC Motor handle failed because of out of
+   * memory
+   *      - ESP_FAIL: Create BDC Motor handle failed because some other error
+   */
+  Motor(gpio_num_t pin_a, gpio_num_t pin_b, int group_id);
   ~Motor();
 
   /**
