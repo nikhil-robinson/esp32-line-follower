@@ -72,7 +72,6 @@ int Puya::read(uint8_t id)
         if (this->event.type == UART_DATA)
         {
             uart_read_bytes(this->num, this->dtmp, this->event.size, portMAX_DELAY);
-            ESP_LOG_BUFFER_HEX(TAG,this->dtmp, this->event.size);
             if ((this->dtmp[0] == 'L') && (this->dtmp[6] == 'F'))
             {
                 if (id < 6)
