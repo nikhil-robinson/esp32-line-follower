@@ -30,21 +30,6 @@ int P, D, I, previousError, PIDvalue, error;
 int lsp, rsp;
 int lfspeed = 40;
 
-float Kp = 0;
-float Kd = 0;
-float Ki = 0;
-
-pid_ctrl_parameter_t pid_para = {
-    .kp = 0.6,
-    .ki = 0.4,
-    .kd = 0.2,
-    .cal_type = PID_CAL_TYPE_INCREMENTAL,
-    .max_output   = 254,
-    .min_output   = 0,
-    .max_integral = 254,
-    .min_integral = -0,
-
-}
 
 void encoder_init()
 {
@@ -80,7 +65,6 @@ void encoder_init()
     encoder1->start();
     encoder2->start();
 }
-
 
 void claibrate()
 {
@@ -122,10 +106,19 @@ void claibrate()
 void linefollow(void *args)
 {
 
-    pid_ctrl_config_t conf ={
-        .init_param =
+    pid_ctrl_config_t conf = {
+        .init_param = {
+            .kp = 0.6,
+            .ki = 0.4,
+            .kd = 0.2,
+            .max_output = 254,
+            .min_output = 0,
+            .max_integral = 254,
+            .min_integral = -0,
+            .cal_type = PID_CAL_TYPE_INCREMENTAL,
+        },
     };
-    pid = new Pid();
+    pid = new Pid(&conf);
 
     while (1)
     {
@@ -146,16 +139,9 @@ void linefollow(void *args)
         }
         else if (puya->read(3) > threshold[3])
         {
-            Kp = 0.0006 * (1000 - puya->read(3));
-            Kd = 10 * Kp;
             int error = (puya->read(2) - puya->read(4));
 
-            P = error;
-            I = I + error;
-            D = error - previousError;
-
-            PIDvalue = (Kp * P) + (Ki * I) + (Kd * D);
-            previousError = error;
+            PIDvalue = pid->compute(error);
 
             lsp = lfspeed - PIDvalue;
             rsp = lfspeed + PIDvalue;
@@ -191,15 +177,8 @@ extern "C" void app_main()
     motor2->enable();
 
     puya = new Puya(GPIO_NUM_17, GPIO_NUM_16, UART_NUM_1);
+
     wait_for_start();
     claibrate();
     xTaskCreatePinnedToCore(linefollow, "linefollow", 4096, NULL, 20, NULL, 1);
-
-    // puya = new Puya(GPIO_NUM_17, GPIO_NUM_16, UART_NUM_1);
-
-    // while (1)
-    // {
-    //     ESP_LOGI(TAG,"[%d] [%d] [%d] [%d] [%d]",puya->read(1),puya->read(2),puya->read(3),puya->read(4),puya->read(5));
-    //     vTaskDelay(1);
-    // }
 }
