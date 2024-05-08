@@ -77,8 +77,11 @@ void claibrate()
 
     for (int i = 0; i < 3000; i++)
     {
-        motor1->drive(50);
-        motor2->drive(-50);
+        motor1->set_speed(motor1->max_speed);
+        motor1->forward();
+
+        motor2->set_speed(motor2->max_speed);
+        motor2->reverse();
 
         for (int i = 1; i < 6; i++)
         {
@@ -99,8 +102,8 @@ void claibrate()
         ESP_LOGI(TAG, "THR[i] %d", threshold[i]);
     }
 
-    motor1->drive(0);
-    motor2->drive(0);
+    motor1->stop();
+    motor2->stop();
 }
 
 void linefollow(void *args)
@@ -126,16 +129,19 @@ void linefollow(void *args)
         {
             lsp = 0;
             rsp = lfspeed;
-            motor1->drive(0);
-            motor2->drive(lfspeed);
+
+            motor1->stop();
+            motor2->set_speed(lfspeed);
+            motor2->forward();
         }
 
         else if (puya->read(5) > threshold[5] && puya->read(1) < threshold[1])
         {
             lsp = lfspeed;
             rsp = 0;
-            motor1->drive(lfspeed);
-            motor2->drive(0);
+            motor2->stop();
+            motor1->set_speed(lfspeed);
+            motor1->forward();
         }
         else if (puya->read(3) > threshold[3])
         {
@@ -149,8 +155,12 @@ void linefollow(void *args)
             lsp = clamp(lsp, 0, 254);
             rsp = clamp(rsp, 0, 254);
 
-            motor1->drive(lsp);
-            motor2->drive(rsp);
+
+            motor1->set_speed(lsp);
+            motor1->forward();
+
+            motor2->set_speed(rsp);
+            motor2->forward();
         }
         vTaskDelay(1);
     }
@@ -175,6 +185,8 @@ extern "C" void app_main()
 
     motor1->enable();
     motor2->enable();
+
+
 
     puya = new Puya(GPIO_NUM_17, GPIO_NUM_16, UART_NUM_1);
 
