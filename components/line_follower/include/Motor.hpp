@@ -18,6 +18,8 @@ private:
   bdc_motor_handle_t motor = NULL;
 
 public:
+
+  int max_speed = BDC_MCPWM_DUTY_TICK_MAX;
   /**
    * @brief Create BDC Motor based on MCPWM peripheral
    *
@@ -111,4 +113,6 @@ public:
    *      - ESP_FAIL: Stop motor failed because some other error occurred
    */
   esp_err_t stop();
+
+  esp_err_t drive(int speed);
 };

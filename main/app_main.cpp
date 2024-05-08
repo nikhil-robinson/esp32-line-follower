@@ -4,7 +4,7 @@
 #include "Sensor.hpp"
 #include <stdio.h>
 #include "Puya.hpp"
-
+#include "Utility.hpp"
 
 #define TAG "LINE_FOLLOWER"
 
@@ -20,45 +20,31 @@ Sensor *sensor3 = nullptr;
 Sensor *sensor4 = nullptr;
 Sensor *sensor5 = nullptr;
 
-Pid *pid = nullptr;
+Pid *pid1 = nullptr;
 
 Puya *puya = nullptr;
 
+static volatile int minValues[6], maxValues[6], threshold[6];
+static volatile sensor_val_t sensor_val = {0};
 
+int P, D, I, previousError, PIDvalue, error;
+int lsp, rsp;
+int lfspeed = 400;
 
+float Kp = 0;
+float Kd = 0;
+float Ki = 0;
 
-void motor_task(void *args)
-{
-
-    motor1 = new Motor(GPIO_NUM_41, GPIO_NUM_37,  0);
-    motor2 = new Motor(GPIO_NUM_21, GPIO_NUM_35, 0);
-
-    motor1->enable();
-    motor2->enable();
-
-    motor1->set_speed(400);
-    motor2->set_speed(400);
-
-    while (true)
-    {
-        motor1->forward();
-        motor2->forward();
-        motor1->set_speed(400);
-        motor2->set_speed(400);
-        vTaskDelay(1);
-    }
-}
-
-void encoder_task(void *args)
+void encoder_init()
 {
     pcnt_config_t conf1 = {
         .ch0 = {
             .edge_gpio_num = 10,
-            .level_gpio_num =11,
+            .level_gpio_num = 11,
         },
         .ch1 = {
             .edge_gpio_num = 11,
-            .level_gpio_num =10,
+            .level_gpio_num = 10,
         },
     };
     encoder1 = new Encoder(conf1);
@@ -66,16 +52,15 @@ void encoder_task(void *args)
     pcnt_config_t conf2 = {
         .ch0 = {
             .edge_gpio_num = 13,
-            .level_gpio_num =12,
+            .level_gpio_num = 12,
         },
         .ch1 = {
             .edge_gpio_num = 12,
-            .level_gpio_num =13,
+            .level_gpio_num = 13,
         },
     };
 
     encoder2 = new Encoder(conf2);
-
 
     encoder1->enable();
     encoder2->enable();
@@ -83,28 +68,153 @@ void encoder_task(void *args)
     encoder2->clear_count();
     encoder1->start();
     encoder2->start();
+}
 
-    while (true)
+// void pid_task(void *args)
+// {
+//     encoder_init();
+
+//     pid_ctrl_parameter_t pid_runtime_param = {
+//         .kp = 0.6,
+//         .ki = 0.4,
+//         .kd = 0.2,
+//         .cal_type = PID_CAL_TYPE_INCREMENTAL,
+//         .max_output   = motor1->max_speed - 1,
+//         .min_output   = 0,
+//         .max_integral = 1000,
+//         .min_integral = -1000,
+//     };
+
+//     while (true)
+//     {
+//         ESP_LOGI(TAG, "EN1 count [%d] EN2 count [%d]", encoder1->get_count(), encoder2->get_count());
+//         vTaskDelay(1);
+//     }
+// }
+
+void claibrate()
+{
+
+    for (int i = 1; i < 6; i++)
     {
-        ESP_LOGI(TAG,"EN1 count [%d] EN2 count [%d]",encoder1->get_count(),encoder2->get_count());
+        minValues[i] = puya->read(i);
+        maxValues[i] = puya->read(i);
+    }
+
+    motor1->set_speed(lfspeed);
+    motor2->set_speed(lfspeed);
+
+    motor1->drive(50);
+    motor2->drive(-50);
+
+    for (int i = 0; i < 3000; i++)
+    {
+
+        for (int i = 1; i < 6; i++)
+        {
+            if (puya->read(i) < minValues[i])
+            {
+                minValues[i] = puya->read(i);
+            }
+            if (puya->read(i) > maxValues[i])
+            {
+                maxValues[i] = puya->read(i);
+            }
+        }
+    }
+
+    for (int i = 1; i < 6; i++)
+    {
+        threshold[i] = (minValues[i] + maxValues[i]) / 2;
+        ESP_LOGI(TAG, "THR[%d] : %d", i, threshold[i]);
+    }
+
+    motor1->stop();
+    motor2->stop();
+}
+
+void linefollow(void * args)
+{
+    motor1 = new Motor(GPIO_NUM_41, GPIO_NUM_37, 0);
+    motor2 = new Motor(GPIO_NUM_21, GPIO_NUM_35, 0);
+
+    motor1->enable();
+    motor2->enable();
+
+    motor1->set_speed(lfspeed);
+    motor2->set_speed(lfspeed);
+
+    puya = new Puya(GPIO_NUM_17, GPIO_NUM_16, UART_NUM_1);
+
+    while (1)
+    {
+        if (puya->read(1) > threshold[1] && puya->read(5) < threshold[5])
+        {
+            lsp = 0;
+            rsp = lfspeed;
+            motor1->drive(0);
+            motor2->drive(lfspeed);
+        }
+
+        else if (puya->read(5) > threshold[5] && puya->read(1) < threshold[1])
+        {
+            lsp = lfspeed; rsp = 0;
+            motor1->drive(lfspeed);
+            motor2->drive(0);
+        }
+        else if (puya->read(3) > threshold[3])
+        {
+            Kp = 0.0006 * (1000 - puya->read(3));
+            Kd = 10 * Kp;
+            int error = (puya->read(2) - puya->read(4));
+
+            P = error;
+            I = I + error;
+            D = error - previousError;
+
+            PIDvalue = (Kp * P) + (Ki * I) + (Kd * D);
+            previousError = error;
+
+            lsp = lfspeed - PIDvalue;
+            rsp = lfspeed + PIDvalue;
+
+            lsp = clamp(lsp,0,motor1->max_speed -1);
+            rsp = clamp(rsp,0,motor2->max_speed -1);
+        }
         vTaskDelay(1);
     }
 }
 
+void wait_for_start()
+{
+    esp_rom_gpio_pad_select_gpio(GPIO_NUM_0);
+    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+   
+
+    while (gpio_get_level(GPIO_NUM_0))
+    {
+       vTaskDelay(1);
+    }
+    
+}
+
 extern "C" void app_main()
 {
+    // wait_for_start();
+    // claibrate();
+    // xTaskCreatePinnedToCore(linefollow, "linefollow", 4096, NULL, 20, NULL, 1);
 
-    // xTaskCreatePinnedToCore(encoder_task, "encoder_task", 4096, NULL, 20, NULL,1);
-    // xTaskCreatePinnedToCore(motor_task, "motor_task", 4096, NULL, 20, NULL,0);
+    puya = new Puya(GPIO_NUM_17, GPIO_NUM_16, UART_NUM_1);
 
-    puya = new Puya(GPIO_NUM_17,GPIO_NUM_16,UART_NUM_1);
-
-    while (true)
+    while (1)
     {
-        sensor_val_t val = puya->read();
+        ESP_LOGI(TAG,"[%d] [%d] [%d] [%d] [%d]",puya->read(1),puya->read(2),puya->read(3),puya->read(4),puya->read(5));
         vTaskDelay(1);
     }
     
+
+    
+
 
 
 }

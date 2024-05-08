@@ -32,11 +32,11 @@ private:
     QueueHandle_t uart0_queue;
     size_t buffered_size;
     uint8_t *dtmp = (uint8_t *)malloc(1024);
-
     sensor_val_t value ={0};
 
 public:
     Puya(gpio_num_t tx, gpio_num_t rx, uart_port_t uart_num);
     ~Puya();
     sensor_val_t read();
+    int read(uint8_t id);
 };

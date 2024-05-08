@@ -29,3 +29,16 @@ esp_err_t Motor::forward() { return bdc_motor_forward(this->motor); }
 esp_err_t Motor::reverse() { return bdc_motor_reverse(this->motor); }
 esp_err_t Motor::coast() { return bdc_motor_coast(this->motor); }
 esp_err_t Motor::stop() { return bdc_motor_brake(this->motor); }
+
+esp_err_t Motor::drive(int speed)
+{
+  this->set_speed(abs(speed));
+  if (speed < 0)
+  {
+    this->reverse();
+  }
+  else
+  {
+    this->forward();
+  }
+}

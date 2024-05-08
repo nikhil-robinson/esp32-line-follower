@@ -40,36 +40,55 @@ sensor_val_t Puya::read()
 {
     if (xQueueReceive(this->uart0_queue, (void *)&this->event, (TickType_t)portMAX_DELAY))
     {
-        bzero(dtmp, 1024);
-        ESP_LOGI(TAG, "uart[%d] event: [%d]", this->num, this->event.type);
+        bzero(this->dtmp, 1024);
         if (this->event.type == UART_DATA)
         {
-            uart_read_bytes(this->num, dtmp, this->event.size, portMAX_DELAY);
-            ESP_LOGI(TAG, "[UART DATA]: size : [%d]", this->event.size);
-            ESP_LOG_BUFFER_HEX(TAG, dtmp, this->event.size);
-            if ((dtmp[0] == 'L') && (dtmp[11] == 'F'))
+            uart_read_bytes(this->num, this->dtmp, this->event.size, portMAX_DELAY);
+            if ((this->dtmp[0] == 'L') && (this->dtmp[11] == 'F'))
             {
-                this->value.sen1 =  ((dtmp[1] << 8) | dtmp[2]);
-                this->value.sen2 =  ((dtmp[3] << 8) | dtmp[4]);
-                this->value.sen3 =  ((dtmp[5] << 8) | dtmp[6]);
-                this->value.sen4 =  ((dtmp[7] << 8) | dtmp[8]);
-                this->value.sen5 =  ((dtmp[9] << 8) | dtmp[10]);
-
-
-                ESP_LOGI(TAG, "%d %d %d %d %d", this->value.sen1,this->value.sen2,this->value.sen3,this->value.sen4,this->value.sen5);
-                
+                this->value.sen1 = ((this->dtmp[1] << 8) | this->dtmp[2]);
+                this->value.sen2 = ((this->dtmp[3] << 8) | this->dtmp[4]);
+                this->value.sen3 = ((this->dtmp[5] << 8) | this->dtmp[6]);
+                this->value.sen4 = ((this->dtmp[7] << 8) | this->dtmp[8]);
+                this->value.sen5 = ((this->dtmp[9] << 8) | this->dtmp[10]);
             }
             return this->value;
-
         }
         else if (this->event.type == UART_BUFFER_FULL)
         {
             uart_flush_input(this->num);
             xQueueReset(this->uart0_queue);
         }
-
-        
     }
 
-    return this->value;
+    return (sensor_val_t){0};
+}
+
+int Puya::read(uint8_t id)
+{
+    if (xQueueReceive(this->uart0_queue, (void *)&this->event, (TickType_t)portMAX_DELAY))
+    {
+        bzero(this->dtmp, 1024);
+        if (this->event.type == UART_DATA)
+        {
+            uart_read_bytes(this->num, this->dtmp, this->event.size, portMAX_DELAY);
+            ESP_LOG_BUFFER_HEX(TAG,this->dtmp, this->event.size);
+            if ((this->dtmp[0] == 'L') && (this->dtmp[6] == 'F'))
+            {
+                if (id < 6)
+                {
+                    return this->dtmp[id];
+                }
+                return 0;
+                
+            }
+        }
+        else if (this->event.type == UART_BUFFER_FULL)
+        {
+            uart_flush_input(this->num);
+            xQueueReset(this->uart0_queue);
+        }
+    }
+
+    return 0;
 }
