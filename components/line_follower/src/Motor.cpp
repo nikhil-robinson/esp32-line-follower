@@ -1,4 +1,5 @@
 #include "Motor.hpp"
+#include "Utility.hpp"
 
 Motor::Motor(gpio_num_t pin_a, gpio_num_t pin_b, int group_id = 0)
 {
@@ -32,13 +33,15 @@ esp_err_t Motor::stop() { return bdc_motor_brake(this->motor); }
 
 esp_err_t Motor::drive(int speed)
 {
-  this->set_speed(abs(speed));
+  esp_err_t err =ESP_OK;
+  err |= bdc_motor_set_speed(this->motor,map(abs(speed),0,254,0,this->max_speed -1));
   if (speed < 0)
   {
-    this->reverse();
+    err |= bdc_motor_reverse(this->motor);
   }
   else
   {
-    this->forward();
+    err |= bdc_motor_forward(this->motor);
   }
+  return err;
 }

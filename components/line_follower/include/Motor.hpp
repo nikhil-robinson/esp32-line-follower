@@ -9,8 +9,7 @@
 
 #define BDC_MCPWM_TIMER_RESOLUTION_HZ CONFIG_BDC_MCPWM_TIMER_RESOLUTION_HZ
 #define BDC_MCPWM_FREQ_HZ CONFIG_BDC_MCPWM_FREQ_HZ
-#define BDC_MCPWM_DUTY_TICK_MAX \
-  (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ)
+#define BDC_MCPWM_DUTY_TICK_MAX  (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ)
 
 class Motor
 {
@@ -19,7 +18,7 @@ private:
 
 public:
 
-  int max_speed = BDC_MCPWM_DUTY_TICK_MAX;
+  int max_speed = BDC_MCPWM_DUTY_TICK_MAX - 1;
   /**
    * @brief Create BDC Motor based on MCPWM peripheral
    *
